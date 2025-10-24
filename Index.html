@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concrete Pump Problem Logger</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f7f9;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px; /* Adjusted for wider image */
+            width: 100%;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #1e3a8a;
+            margin-bottom: 5px;
+        }
+        p {
+            text-align: center;
+            color: #4b5563;
+            margin-bottom: 20px;
+        }
+        /* Canvas Styling - Ensures it's responsive */
+        #pumpCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            cursor: pointer;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            background-color: #ffffff;
+        }
+
+        /* Modal Styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 8vh auto;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            animation: fadeIn 0.3s ease-out;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 32px;
+            font-weight: 300;
+            line-height: 1;
+        }
+        .close-button:hover, .close-button:focus {
+            color: #333;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #374151; }
+        .form-group input[type="text"], .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .problem-options label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        .problem-options input[type="radio"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        .submit-btn {
+            background-color: #10b981;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .submit-btn:hover { background-color: #059669; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Concrete Pump Truck Problem Logger</h1>
+    <p>Click on any numbered component in the diagram to report an issue. Asset Code: **P03856**</p>
+
+    <!-- The Canvas element --><canvas id="pumpCanvas" width="900" height="500">
+        Your browser does not support the HTML canvas tag.
+    </canvas>
+</div>
+
+<!-- Problem Logging Modal --><div id="problemModal" class="modal">
+    <div class="modal-content">
+        <span class="close-button" onclick="closeProblemModal()">&times;</span>
+        <h2 class="text-xl font-bold mb-4">Log Problem for Component: <span id="partNameDisplay" class="text-blue-600"></span></h2>
+        
+        <form id="problemForm">
+            <input type="hidden" id="partNameInput" name="PartName">
+            
+            <div class="form-group">
+                <label for="operatorName">Operator Name/ID:</label>
+                <input type="text" id="operatorName" name="OperatorName" readonly required value="SATYAVEER GURU DAYAL / 497" placeholder="Enter your name or ID">
+            </div>
+            
+            <div class="form-group">
+                <label>Problem Category (Select One):</label>
+                <div id="problemCategories" class="problem-options">
+                    <!-- Categories dynamically inserted here --></div>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Detailed Description of Problem:</label>
+                <textarea id="description" name="Description" rows="4" required placeholder="Describe the symptoms, noise, temperature, or leakage..."></textarea>
+            </div>
+            
+            <button type="submit" class="submit-btn">Log & Send to Workshop</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Constants
+    const CANVAS_WIDTH = 900;  // Adjusted for new image dimensions
+    const CANVAS_HEIGHT = 500; // Adjusted for new image dimensions
+    
+    // FIX: Swapping to a highly reliable placeholder URL to bypass file loading issues.
+    // The placeholder simulates the image layout.
+    const IMAGE_PATH = 'http://192.168.12.103/ITLibrary/Styles/Images/Maintenance/pump.png'; 
+
+    // State Variables
+    let canvas, ctx;
+    let pumpImage = new Image();
+    let currentHoverPart = null;
+
+    // 1. Define Problem Categories for Each Part/Component Number
+    // General categories suitable for external components of a concrete pump truck.
+    const PROBLEM_DATA = {
+        '21.2 (Boom Section 1)': ['Hydraulic Leak', 'Structural Crack', 'Pin/Bushing Wear', 'Cylinder Malfunction'],
+        '22.0 (Boom Hydraulic Line/Hose)': ['Hydraulic Leak', 'Hose Damage', 'Connection Loose', 'Pressure Loss'],
+        '21.1 (Boom Base / Turntable)': ['Structural Crack', 'Bearing Play', 'Rotation Issue', 'Mounting Bolts Loose'],
+        '23.5 (Boom Section 2)': ['Hydraulic Leak', 'Structural Crack', 'Pin/Bushing Wear', 'Cylinder Malfunction'],
+        '23.1 (Boom Section 3)': ['Hydraulic Leak', 'Structural Crack', 'Pin/Bushing Wear', 'Cylinder Malfunction'],
+        '24.4 (Boom Control Mechanism)': ['Electrical Fault', 'Sensor Issue', 'Mechanical Bind', 'Remote Control Problem'],
+        '23.3 (Boom Section 4)': ['Hydraulic Leak', 'Structural Crack', 'Pin/Bushing Wear', 'Cylinder Malfunction'],
+        '22.8 (Hydraulic Manifold/Valve)': ['Leakage', 'Valve Sticking', 'Electrical Fault', 'Pressure Issue'],
+        '23.4 (Boom Section 5)': ['Hydraulic Leak', 'Structural Crack', 'Pin/Bushing Wear', 'Cylinder Malfunction'],
+        '25.0 (End Hose/Discharge)': ['Clogging', 'Hose Damage', 'Leakage', 'Mounting Issue'],
+        '21.4 (Outrigger Leg - Front)': ['Hydraulic Leak', 'Structural Damage', 'Extension Failure', 'Pad Wear'],
+        '21.3 (Truck Chassis / Frame)': ['Structural Crack', 'Corrosion', 'Mounting Issue', 'General Damage'],
+        '25.3 (Pumping Unit / Hopper)': ['Clogging', 'Concrete Leak', 'Agitator Fault', 'Piston Wear'],
+        '2.4 (Engine / Power Unit)': ['Engine Trouble', 'Overheating', 'Fluid Leak', 'Electrical Issue'],
+        '9.1 (Rear Outrigger Leg)': ['Hydraulic Leak', 'Structural Damage', 'Extension Failure', 'Pad Wear'],
+        '8.1 (Rear Outrigger Pad)': ['Damage/Wear', 'Missing', 'Loose'],
+        'Default': ['General Malfunction', 'Fluid Leak', 'Unusual Noise', 'Vibration', 'Electrical Issue']
+    };
+
+    // 2. Define Hotspot Areas (Coordinates are normalized to a 900x500 canvas)
+    // These coordinates are approximate and based on visual inspection of the numbers/dashed lines.
+    // Adjust 'x', 'y', 'w', 'h' values as needed for more precise targeting.
+    // The visual overlay will now appear on top of the placeholder image.
+    const HOTSPOTS = [
+        // Top row of labels (Boom Sections, Lines, etc.)
+        { name: '21.2 (Boom Section 1)', x: 40, y: 20, w: 40, h: 25, color: 'rgba(255, 99, 71, 0.4)' },
+        { name: '22.0 (Boom Hydraulic Line/Hose)', x: 95, y: 20, w: 40, h: 25, color: 'rgba(60, 179, 113, 0.4)' }, // Left 22.0
+        { name: '21.1 (Boom Base / Turntable)', x: 170, y: 20, w: 40, h: 25, color: 'rgba(147, 112, 219, 0.4)' },
+        { name: '23.5 (Boom Section 2)', x: 225, y: 20, w: 40, h: 25, color: 'rgba(255, 140, 0, 0.4)' },
+        { name: '23.1 (Boom Section 3)', x: 280, y: 20, w: 40, h: 25, color: 'rgba(0, 191, 255, 0.4)' },
+        { name: '24.4 (Boom Control Mechanism)', x: 345, y: 20, w: 40, h: 25, color: 'rgba(255, 215, 0, 0.4)' },
+        { name: '23.3 (Boom Section 4)', x: 425, y: 20, w: 40, h: 25, color: 'rgba(255, 99, 71, 0.4)' },
+        { name: '22.0 (Boom Hydraulic Line/Hose)', x: 500, y: 20, w: 40, h: 25, color: 'rgba(60, 179, 113, 0.4)' }, // Right 22.0
+        { name: '22.8 (Hydraulic Manifold/Valve)', x: 590, y: 20, w: 40, h: 25, color: 'rgba(147, 112, 219, 0.4)' },
+        { name: '23.4 (Boom Section 5)', x: 755, y: 20, w: 40, h: 25, color: 'rgba(255, 140, 0, 0.4)' },
+        { name: '25.0 (End Hose/Discharge)', x: 820, y: 20, w: 40, h: 25, color: 'rgba(0, 191, 255, 0.4)' },
+
+        // Bottom row of labels (Chassis, Outriggers, Pumping Unit, Engine)
+        { name: '21.4 (Outrigger Leg - Front)', x: 90, y: 460, w: 40, h: 25, color: 'rgba(255, 215, 0, 0.4)' },
+        { name: '21.3 (Truck Chassis / Frame)', x: 160, y: 460, w: 40, h: 25, color: 'rgba(255, 99, 71, 0.4)' }, // Left 21.3
+        { name: '25.3 (Pumping Unit / Hopper)', x: 300, y: 460, w: 40, h: 25, color: 'rgba(60, 179, 113, 0.4)' },
+        { name: '2.4 (Engine / Power Unit)', x: 420, y: 460, w: 40, h: 25, color: 'rgba(147, 112, 219, 0.4)' },
+        { name: '21.3 (Truck Chassis / Frame)', x: 570, y: 460, w: 40, h: 25, color: 'rgba(255, 140, 0, 0.4)' }, // Right 21.3
+        { name: '9.1 (Rear Outrigger Leg)', x: 640, y: 460, w: 40, h: 25, color: 'rgba(0, 191, 255, 0.4)' },
+        { name: '8.1 (Rear Outrigger Pad)', x: 715, y: 460, w: 40, h: 25, color: 'rgba(255, 215, 0, 0.4)' }
+    ];
+
+    // 3. Drawing Functions
+    function drawHotspots() {
+        // Redraw all rectangles for visual feedback (hover/active)
+        HOTSPOTS.forEach(part => {
+            if (part === currentHoverPart) {
+                // Highlight the hovered part
+                ctx.fillStyle = part.color;
+                ctx.fillRect(part.x, part.y, part.w, part.h);
+                ctx.strokeStyle = '#f97316'; // Brighter outline
+                ctx.lineWidth = 3;
+                ctx.strokeRect(part.x, part.y, part.w, part.h);
+            }
+        });
+    }
+
+    function draw() {
+        // Clear canvas
+        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // Draw the pump image
+        if (pumpImage.complete) {
+            ctx.drawImage(pumpImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        }
+
+        // Draw the hotspots (for hover effect)
+        drawHotspots();
+    }
+
+    // 4. Hit Test Logic (to check if point is inside a rectangle)
+    function hitTest(x, y) {
+        // Check parts in reverse order so smaller, front parts are prioritized
+        for (let i = HOTSPOTS.length - 1; i >= 0; i--) {
+            const part = HOTSPOTS[i];
+            if (x >= part.x && x <= part.x + part.w && y >= part.y && y <= part.y + part.h) {
+                return part;
+            }
+        }
+        return null;
+    }
+
+    // 5. Event Handlers
+    function handleMouseMove(event) {
+        const rect = canvas.getBoundingClientRect();
+        // Calculate the mouse position relative to the canvas and scale it
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mouseX = (event.clientX - rect.left) * scaleX;
+        const mouseY = (event.clientY - rect.top) * scaleY;
+
+        const hitPart = hitTest(mouseX, mouseY);
+
+        if (hitPart) {
+            canvas.style.cursor = 'pointer';
+            if (hitPart !== currentHoverPart) {
+                currentHoverPart = hitPart;
+                draw(); // Redraw to show the highlight
+            }
+        } else {
+            canvas.style.cursor = 'default';
+            if (currentHoverPart !== null) {
+                currentHoverPart = null;
+                draw(); // Redraw to remove the highlight
+            }
+        }
+    }
+
+    function handleClick(event) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mouseX = (event.clientX - rect.left) * scaleX;
+        const mouseY = (event.clientY - rect.top) * scaleY;
+
+        const part = hitTest(mouseX, mouseY);
+        if (part) {
+            showProblemModal(part.name);
+        }
+    }
+
+    // 6. Modal Functions
+    const modal = document.getElementById("problemModal");
+    const partNameDisplay = document.getElementById("partNameDisplay");
+    const partNameInput = document.getElementById("partNameInput");
+    const problemCategoriesDiv = document.getElementById("problemCategories");
+
+    function showProblemModal(partName) {
+        partNameDisplay.textContent = partName;
+        partNameInput.value = partName;
+
+        const categories = PROBLEM_DATA[partName] || PROBLEM_DATA['Default'];
+        
+        // Dynamically create radio buttons for problem categories
+        problemCategoriesDiv.innerHTML = categories.map((category, index) => `
+            <label>
+                <input type="radio" name="ProblemCategory" value="${category}" ${index === 0 ? 'checked' : ''} required>
+                ${category}
+            </label>
+        `).join('');
+
+        modal.style.display = "block";
+    }
+
+    function closeProblemModal() {
+        modal.style.display = "none";
+        document.getElementById("problemForm").reset(); // Reset form
+    }
+
+    // Close the modal if the user clicks outside of it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            closeProblemModal();
+        }
+    }
+
+    // 7. Form Submission Logic
+    document.getElementById("problemForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        // Collect all form data
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData.entries());
+        
+        // --- ASP.NET INTEGRATION POINT ---
+        // This is where you would perform a fetch POST request to your ASP.NET Web API endpoint
+        
+        console.log("--- Problem Log Data Ready to Send ---");
+        console.log("Part Affected:", data.PartName);       
+        console.log("Category:", data.ProblemCategory);
+        console.log("Description:", data.Description);
+        
+        // Using a custom alert replacement since window.alert() is forbidden
+        alertMessage(`Problem Logged for ${data.PartName}.`, 'Success');
+
+        // For demonstration, we just close the modal
+        closeProblemModal();
+    });
+    
+    // Custom Alert/Message Box Function
+    function alertMessage(message, title = 'Notification') {
+        const messageBox = document.createElement('div');
+        messageBox.style.cssText = `
+            position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 15px 25px; 
+            background: #4CAF50; color: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            opacity: 0; transition: opacity 0.5s, transform 0.5s; transform: translateX(100%);
+            font-size: 16px; font-weight: 600;
+        `;
+        messageBox.innerHTML = `<strong>${title}:</strong> ${message}`;
+        document.body.appendChild(messageBox);
+
+        setTimeout(() => {
+            messageBox.style.opacity = 1;
+            messageBox.style.transform = 'translateX(0)';
+        }, 10);
+
+        setTimeout(() => {
+            messageBox.style.opacity = 0;
+            messageBox.style.transform = 'translateX(100%)';
+            messageBox.addEventListener('transitionend', () => messageBox.remove());
+        }, 5000);
+    }
+
+
+    // 8. Initialization
+    window.onload = function() {
+        canvas = document.getElementById('pumpCanvas');
+        ctx = canvas.getContext('2d');
+
+        // Load the image
+        pumpImage.onload = function() {
+            draw();
+            // Attach event listeners after the image is loaded
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('click', handleClick);
+        };
+        pumpImage.onerror = function() {
+            ctx.fillStyle = 'red';
+            ctx.font = '20px Arial';
+            ctx.fillText('Error loading pump image. Using placeholder content.', 10, 50);
+            console.error('Failed to load pump image from path:', IMAGE_PATH);
+            
+            // Draw a temporary rectangle to ensure interactive areas are visible even if the placeholder fails to load
+            ctx.fillStyle = '#CCCCCC';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            ctx.fillStyle = '#333333';
+            ctx.font = '24px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Placeholder Diagram Active', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+
+            // Re-attach listeners even on error to allow testing the logic
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('click', handleClick);
+            drawHotspots();
+        };
+        pumpImage.src = IMAGE_PATH;
+    };
+
+</script>
+
+</body>
+</html>
