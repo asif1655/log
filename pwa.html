@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Hotspot Configuration System</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+	<script src="firebase-config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
+        }
+        /* Custom Tailwind Configuration */
+        .bg-primary { background-color: #3b82f6; } /* Blue 500 */
+        .hover\:bg-primary-light:hover { background-color: #60a5fa; } /* Blue 400 */
+        .text-primary { color: #3b82f6; }
+        .text-warning { color: #f59e0b; } /* Amber 500 */
+        .text-danger { color: #ef4444; } /* Red 500 */
+        .bg-success { background-color: #d1fae5; } /* Green 100 */
+        .text-success { color: #059669; } /* Green 600 */
+        
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 24px;
+        }
+        
+        .hotspot-container {
+            position: relative;
+            display: inline-block;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #e5e7eb;
+            user-select: none;
+            cursor: crosshair;
+            width: 100%; /* Make it responsive */
+        }
+        
+        .hotspot-container img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        
+        .hotspot-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .hotspot-config {
+            background-color: #3b82f6; /* Blue */
+            border: 3px solid white;
+            animation: pulse-config 1.5s infinite;
+        }
+        .hotspot-config:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .hotspot-operator {
+            background-color: #f59e0b; /* Amber/Orange */
+            border: 3px solid white;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+        }
+        .hotspot-operator:hover {
+            background-color: #fbbf24; /* Amber 400 */
+        }
+        
+        @keyframes pulse-config {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <header class="mb-6">
+        <h1 class="text-1xl font-bold text-gray-800">Vehicle Maintenance Hotspot Configure</h1>
+        <p class="text-sm text-gray-500" style="display:none">
+            Current User ID: <span id="current-user-id" class="font-mono bg-gray-200 px-2 py-0.5 rounded text-xs">Loading...</span>
+        </p>
+    </header>
+
+    <div id="status-message"  class="hidden"></div>
+    
+    <!-- NAVIGATION -->
+    <nav class="flex space-x-3 mb-6">
+        <button id="nav-list" onclick="navigate('list')" 
+                class="px-4 py-2 rounded-lg font-semibold transition bg-primary text-white shadow-md">
+            Vehicle List & Log
+        </button>
+        <button id="nav-config" onclick="navigate('config', currentVehicle?.id)" 
+                class="hidden px-4 py-2 rounded-lg font-semibold transition bg-gray-500 text-white hover:bg-gray-600">
+            Configuration
+        </button>
+        <button id="nav-operator" onclick="navigate('operator', currentVehicle?.id)" 
+                class="hidden px-4 py-2 rounded-lg font-semibold transition bg-gray-500 text-white hover:bg-gray-600">
+            Operator View
+        </button>
+    </nav>
+    
+    <!-- MAIN VIEW CONTAINER -->
+    <main>
+        
+        <!-- 1. VEHICLE LIST & LOG VIEW -->
+        <div id="view-list" class="space-y-6">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Vehicle Type Management Card -->
+                <div class="lg:col-span-2 card">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Vehicle Types</h2>
+                    
+                    <div class="mb-4 flex space-x-3">
+                        <input type="text" id="new-vehicle-name" placeholder="New Vehicle Name (e.g., Forklift, Loader)" 
+                               class="flex-grow p-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-primary">
+                        <button onclick="addVehicleType()" 
+                                class="px-4 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-light transition shadow-md">
+                            Add Vehicle
+                        </button>
+                    </div>
+
+                    <!-- Vehicle List Table -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" colspan="2">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vehicle-list-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Vehicle rows will be rendered here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Problem Log Card -->
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Recent Problem Log (Public)</h2>
+                    <div id="problem-log-container" class="space-y-3 max-h-96 overflow-y-auto">
+                        <!-- Problem logs will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. CONFIGURATION VIEW (Hotspot/Diagram Setup) -->
+        <div id="view-config" class="hidden space-y-6">
+            <h2 class="text-2xl font-bold text-gray-800">Configure Vehicle: <span id="config-vehicle-name" class="text-primary"></span></h2>
+
+            <!-- Diagram Tabs -->
+            <div id="diagram-tabs" class="flex space-x-2 border-b pb-2">
+                <!-- Diagram buttons rendered here -->
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Diagram and Hotspot Placement Card -->
+                <div class="lg:col-span-2 card space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-700 flex justify-between items-center">
+                        Diagram: <span id="current-diagram-name" class="text-sm font-normal text-gray-500"></span>
+                        <button onclick="saveConfiguration()" 
+                                class="px-4 py-2 bg-success text-success font-semibold rounded-lg hover:bg-green-200 transition shadow-sm">
+                            Save Configuration
+                        </button>
+                    </h3>
+
+                    <div id="hotspot-container" class="hotspot-container" onclick="placeHotspot(event)">
+                        <!-- Hotspots are placed over this image -->
+                        <img id="base-image" src="https://placehold.co/800x400/eeeeee/333333?text=Upload+Image" alt="Vehicle Diagram">
+                    </div>
+                    
+                    <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+                         <div class="flex-grow">
+                             <label for="diagram-image-upload" class="block text-sm font-medium text-gray-700 mb-1">Upload New Diagram Image (JPEG/PNG)</label>
+                             <input type="file" id="diagram-image-upload" accept="image/*" onchange="handleImageUpload(event)" 
+                                    class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-light">
+                         </div>
+                         <div class="flex-grow flex items-end">
+                              <input type="text" id="new-diagram-name" placeholder="Diagram Name (e.g., Engine, Hydraulics)" 
+                                   class="flex-grow p-2 border border-gray-300 rounded-l-lg focus:border-primary focus:ring-primary">
+                             <button onclick="addNewDiagram()" 
+                                     class="px-4 py-2 bg-gray-500 text-white rounded-r-lg font-semibold hover:bg-gray-600 transition shadow-sm">
+                                 Add Diagram
+                             </button>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Hotspot List Card -->
+                <div class="card">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Hotspot Details</h3>
+                    <div class="overflow-y-auto max-h-[500px]">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                                    <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Problem Type</th>
+                                    <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hotspot-list-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Hotspot rows will be rendered here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 3. OPERATOR VIEW (Problem Logging) -->
+        <div id="view-operator" class="hidden space-y-6">
+            <h2 class="text-2xl font-bold text-gray-800">Operator Log for: <span id="operator-vehicle-name" class="text-warning"></span></h2>
+            
+            <!-- Diagram Tabs -->
+            <div id="operator-diagram-tabs" class="flex space-x-2 border-b pb-2">
+                <!-- Diagram buttons rendered here -->
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Diagram and Hotspot Selection Card -->
+                <div class="lg:col-span-2 card space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Select Area of Concern
+                    </h3>
+
+                    <div id="operator-hotspot-container" class="hotspot-container">
+                        <!-- Hotspots are placed over this image -->
+                        <img id="operator-base-image" src="https://placehold.co/800x400/eeeeee/333333?text=Diagram+Not+Loaded" alt="Vehicle Diagram">
+                    </div>
+                </div>
+
+                <!-- Problem Logging Card -->
+                <div class="card">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Log Problem</h3>
+                    
+                    <div id="operator-selected-hotspot" class="hidden p-3 mb-4 rounded-lg border-l-4 border-warning bg-yellow-50">
+                        <p class="text-sm font-medium text-warning">Selected Hotspot:</p>
+                        <p id="selected-hotspot-name" class="text-base font-bold text-gray-800"></p>
+                         <p id="selected-hotspot-type" class="text-xs font-medium text-gray-500 mt-1"></p>
+                    </div>
+
+                    <label for="problem-description" class="block text-sm font-medium text-gray-700 mb-1">Detailed Description</label>
+                    <textarea id="problem-description" rows="4" placeholder="Describe the issue (e.g., 'Hydraulic fluid leak observed near the cylinder', 'Engine making a knocking sound at idle')."
+                              class="w-full p-3 border border-gray-300 rounded-lg focus:border-warning focus:ring-warning resize-none"></textarea>
+
+                    <button id="log-problem-button" onclick="logProblem()" disabled
+                            class="mt-4 w-full px-4 py-2 bg-warning text-white rounded-lg font-semibold hover:bg-yellow-600 transition shadow-md disabled:bg-gray-400">
+                        Submit Problem Report
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+    
+    <!-- Firebase Script Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- GLOBAL VARIABLES & STATE ---
+        let app, db, auth;
+        let userId = 'loading'; // Will be set by onAuthStateChanged
+        let currentVehicle = null; // {id: string, name: string}
+        let currentDiagram = null; // {id: string, name: string, image: string, hotspots: []}
+        let vehicleTypes = []; // Array of {id: name}
+        let diagramsMap = {}; // Maps vehicleId to a map of diagramId to diagramData
+        let problemsLog = []; // Array of logged problems
+        
+        // DOM Elements are now defined inside initializeFirebase to ensure they exist
+        let statusMessageEl, hotspotContainerEl, operatorHotspotContainerEl, views;
+        
+        // Problem types definition
+        const PROBLEM_TYPES = [
+            { value: "0", name: "--Select Problem Type--" },
+            { value: "14", name: "MECHANICAL" },
+            { value: "15", name: "ELECTRICAL" },
+            { value: "16", name: "HYDRAULIC" },
+            { value: "17", name: "UNDER CHASSIS" },
+            { value: "18", name: "FABRICATION" },
+            { value: "19", name: "TYRE" }
+        ];
+
+
+        const state = {
+            view: 'list', // 'list', 'config', 'operator'
+            selectedHotspot: null, // Hotspot object for operator mode
+        };
+        
+        // --- FIREBASE INITIALIZATION ---
+
+        // IMPORTANT: Retrieve global variables for config, app ID, and auth token
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // --- LOCAL CONFIGURATION PLACEHOLDER ---
+        let firebaseConfig = {};
+        let configError = false; 
+        
+        try {
+            // Try to load from Canvas environment variable first
+            firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        } catch (e) {
+            console.warn("Could not parse __firebase_config. Assuming local environment.");
+        }
+        
+        // Fallback for local testing (REPLACE THESE PLACEHOLDERS WITH YOUR OWN FIREBASE CONFIG!)
+        if (Object.keys(firebaseConfig).length === 0) {
+            console.log("Using Local Placeholder Firebase Config. Replace values for real use.");
+            firebaseConfig = YOUR_FIREBASE_CONFIG;
+            
+            // If API Key is still a placeholder, set error state and disable initialization
+            if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+                 configError = true;
+            }
+        }
+        // --- END LOCAL CONFIGURATION PLACEHOLDER ---
+        
+        // This function encapsulates the main logic to allow for safe use of 'return'
+        async function initializeFirebase() {
+            // --- INITIALIZE DOM ELEMENTS HERE ---
+            // This is the first action inside window.onload/initializeFirebase
+             views = {
+                list: document.getElementById('view-list'),
+                config: document.getElementById('view-config'),
+                operator: document.getElementById('view-operator'),
+            };
+            statusMessageEl = document.getElementById('status-message');
+            hotspotContainerEl = document.getElementById('hotspot-container');
+            operatorHotspotContainerEl = document.getElementById('operator-hotspot-container');
+            // --- END DOM INITIALIZATION ---
+            
+            if (configError) { // Check for config error before attempting init
+                // Display the fatal error message directly on screen
+                const userIdEl = document.getElementById('current-user-id');
+                if (userIdEl) userIdEl.textContent = 'CONFIG ERROR';
+                displayStatus('FATAL ERROR: Firebase Config Missing. Cannot initialize database. (Please update YOUR_API_KEY, etc. in the script)', 'bg-red-100 text-red-700', false);
+                
+                // Hide main navigation and content
+                Object.values(views).forEach(el => el.classList.add('hidden'));
+                document.getElementById('nav-list').classList.add('hidden'); // Hide the default list button too
+                
+                return; // Stop initialization
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('debug'); // ADDED FOR DEBUGGING
+
+                displayStatus('Initializing authentication...', 'bg-blue-100 text-blue-700', false);
+                
+                // 1. Authenticate or Sign In
+                const user = auth.currentUser;
+                if (!user) {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        // Use anonymous sign-in for local environment without custom token
+                        await signInAnonymously(auth); 
+                    }
+                }
+                
+                // 2. Auth State Listener
+                onAuthStateChanged(auth, (user) => {
+                    // --- FIX: Safely retrieve and check the DOM element before setting textContent ---
+                    const userIdEl = document.getElementById('current-user-id');
+
+                    if (user) {
+                        userId = user.uid;
+                        if (userIdEl) userIdEl.textContent = userId;
+                        displayStatus(`Signed in successfully. User ID: ${userId.substring(0, 8)}...`, 'bg-success text-green-700', false);
+                        
+                        // Start real-time data listeners only after authentication is complete
+                        setupRealtimeListeners();
+                        navigate('list'); // Start on the main list view
+                    } else {
+                        // Should not happen if sign-in succeeds, but handles sign-out events
+                        userId = 'unauthenticated';
+                        if (userIdEl) userIdEl.textContent = 'Unauthenticated';
+                        displayStatus('Authentication failed or user logged out.', 'bg-red-100 text-red-700', false);
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase Initialization Failed:", error);
+                // Check for common errors in local environment (e.g., API key invalid)
+                displayStatus(`Initialization Failed: Firebase error: ${error.message}. Check your configuration.`, 'bg-red-100 text-red-700', false);
+            }
+        }
+
+        // --- FIREBASE DATA LISTENERS ---
+
+        function setupRealtimeListeners() {
+            if (!db || !userId) return;
+
+            // 1. Vehicle Types (Public Collection)
+            const vehicleQuery = query(collection(db, `/artifacts/${appId}/public/data/vehicle_types`));
+            onSnapshot(vehicleQuery, (snapshot) => {
+                vehicleTypes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderVehicleList();
+                
+                // After loading vehicle types, load diagrams for the currently active vehicle
+                if (currentVehicle) {
+                    loadDiagrams(currentVehicle.id);
+                }
+            });
+
+            // 2. Problem Log (Public Collection)
+            const problemsQuery = query(collection(db, `/artifacts/${appId}/public/data/problem_log`));
+            onSnapshot(problemsQuery, (snapshot) => {
+                problemsLog = snapshot.docs.map(doc => doc.data());
+                renderProblemLog();
+            });
+        }
+
+        // Function to load the diagrams for a specific vehicle. Private data.
+        function loadDiagrams(vehicleId) {
+            if (!db || !userId) return;
+
+            // Guard against the possibility of the diagram collection not existing yet
+            const diagramsCollectionPath = `/artifacts/${appId}/users/${userId}/vehicle_diagrams/${vehicleId}/diagrams`;
+            
+            const diagramsQuery = query(collection(db, diagramsCollectionPath));
+            
+            // This is a private collection, so it respects the security rules
+            onSnapshot(diagramsQuery, (snapshot) => {
+                diagramsMap[vehicleId] = {};
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    // Deserialize hotspots
+                    // Using try/catch for robust JSON parsing
+                    try {
+                        data.hotspots = JSON.parse(data.hotspotsJson || '[]');
+                    } catch (e) {
+                         console.error(`Failed to parse hotspots JSON for diagram ${doc.id}:`, e);
+                         data.hotspots = [];
+                    }
+                    diagramsMap[vehicleId][doc.id] = data;
+                });
+                
+                // If we are on the config/operator view for this vehicle, re-render
+                if (currentVehicle && currentVehicle.id === vehicleId) {
+                    // Update currentDiagram reference if the ID is still valid
+                    if (currentDiagram && diagramsMap[currentVehicle.id][currentDiagram.id]) {
+                        currentDiagram = diagramsMap[currentVehicle.id][currentDiagram.id];
+                    } else {
+                        // If current diagram was deleted or unset, select the first one
+                        const firstDiagramId = Object.keys(diagramsMap[currentVehicle.id])[0];
+                        currentDiagram = diagramsMap[currentVehicle.id][firstDiagramId] || null;
+                    }
+                    
+                    if (state.view === 'config') {
+                        renderDiagramTabs('config');
+                        renderHotspotView('config');
+                    } else if (state.view === 'operator') {
+                        renderDiagramTabs('operator');
+                        renderHotspotView('operator');
+                    }
+                }
+            }, (error) => {
+                // Handle potential Firestore permission errors on private collection
+                console.error("Error loading diagrams (Permission Denied likely):", error);
+                displayStatus(`Error loading vehicle diagrams: ${error.message}`, 'bg-red-100 text-red-700', false);
+            });
+        }
+
+        // --- UI RENDER FUNCTIONS ---
+
+        function displayStatus(message, className, autoHide = true) {
+            // Check if statusMessageEl is defined (it is defined in initializeFirebase)
+            if (!statusMessageEl) {
+                 console.warn("displayStatus called before DOM initialization. Message:", message);
+                 return; // Silently exit if DOM element is not ready
+            }
+            statusMessageEl.textContent = message;
+            statusMessageEl.className = `mb-4 p-3 rounded-lg text-sm text-center ${className}`;
+            statusMessageEl.classList.remove('hidden');
+            if (autoHide) {
+                setTimeout(() => {
+                    statusMessageEl.classList.add('hidden');
+                }, 4000);
+            }
+        }
+        
+        function navigate(viewName, vehicleId = null) {
+            // Hide all views and navigation buttons
+            Object.values(views).forEach(el => el.classList.add('hidden'));
+            document.getElementById('nav-config').classList.add('hidden');
+            document.getElementById('nav-operator').classList.add('hidden');
+
+            // Show target view and update state
+            if(views[viewName]) {
+                 views[viewName].classList.remove('hidden');
+                 state.view = viewName;
+            } else {
+                 console.error(`Attempted to navigate to unknown view: ${viewName}`);
+                 return; // Prevent further execution if viewName is invalid
+            }
+            
+            // Highlight the active navigation button
+            const activeNavButton = document.getElementById(`nav-${viewName}`);
+            if (activeNavButton) {
+                activeNavButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                activeNavButton.classList.add('bg-primary', 'hover:bg-primary-light');
+            }
+            
+            // Set up common navigation button styles
+            const navButtons = document.querySelectorAll('nav button');
+            navButtons.forEach(btn => {
+                if (btn.id === `nav-${viewName}`) {
+                     btn.classList.add('bg-primary', 'hover:bg-primary-light');
+                     btn.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                } else {
+                     btn.classList.remove('bg-primary', 'hover:bg-primary-light');
+                     btn.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                }
+                
+                if (viewName !== 'list') {
+                    // Show all navigation buttons when not on the list view
+                    btn.classList.remove('hidden');
+                } else {
+                    // Hide config/operator buttons when on the list view
+                    if (btn.id !== 'nav-list') {
+                         btn.classList.add('hidden');
+                    }
+                }
+            });
+
+
+            // Handle view-specific setup
+            if (viewName === 'list') {
+                currentVehicle = null;
+                currentDiagram = null;
+                renderVehicleList();
+                renderProblemLog(); // Ensure log is updated
+            } else if (vehicleId && vehicleTypes.length > 0) {
+                currentVehicle = vehicleTypes.find(v => v.id === vehicleId);
+                if (!currentVehicle) {
+                    displayStatus('Error: Vehicle not found.', 'bg-red-100 text-red-700', true);
+                    return navigate('list');
+                }
+                
+                // Ensure diagrams are loaded for the current vehicle, then proceed
+                loadDiagrams(vehicleId);
+                
+                // Set the current diagram to the first one available, or null
+                const diagrams = diagramsMap[vehicleId] || {};
+                const firstDiagramId = Object.keys(diagrams)[0];
+                // IMPORTANT: Ensure currentDiagram is set to the actual object from the map
+                currentDiagram = diagrams[firstDiagramId] || null;
+
+                if (viewName === 'config') {
+                    document.getElementById('config-vehicle-name').textContent = currentVehicle.name;
+                    renderDiagramTabs('config');
+                    renderHotspotView('config');
+                } else if (viewName === 'operator') {
+                    document.getElementById('operator-vehicle-name').textContent = currentVehicle.name;
+                    state.selectedHotspot = null; // Clear selection
+                    const problemDescriptionEl = document.getElementById('problem-description');
+                    const logProblemButtonEl = document.getElementById('log-problem-button');
+                    const selectedHotspotEl = document.getElementById('operator-selected-hotspot');
+
+                    if (problemDescriptionEl) problemDescriptionEl.value = '';
+                    if (logProblemButtonEl) logProblemButtonEl.disabled = true;
+                    if (selectedHotspotEl) selectedHotspotEl.classList.add('hidden');
+
+                    renderDiagramTabs('operator');
+                    renderHotspotView('operator');
+                }
+            }
+        }
+        
+        function selectDiagram(diagramId) {
+            if (!currentVehicle || !diagramsMap[currentVehicle.id][diagramId]) return;
+            currentDiagram = diagramsMap[currentVehicle.id][diagramId];
+            
+            // Re-render UI based on current view
+            if (state.view === 'config') {
+                renderDiagramTabs('config');
+                renderHotspotView('config');
+            } else if (state.view === 'operator') {
+                state.selectedHotspot = null;
+                // Reset operator UI elements
+                const problemDescriptionEl = document.getElementById('problem-description');
+                const logProblemButtonEl = document.getElementById('log-problem-button');
+                const selectedHotspotEl = document.getElementById('operator-selected-hotspot');
+
+                if (problemDescriptionEl) problemDescriptionEl.value = '';
+                if (logProblemButtonEl) logProblemButtonEl.disabled = true;
+                if (selectedHotspotEl) selectedHotspotEl.classList.add('hidden');
+
+                renderDiagramTabs('operator');
+                renderHotspotView('operator');
+            }
+        }
+
+        function renderDiagramTabs(mode) {
+            if (!currentVehicle || !diagramsMap[currentVehicle.id]) return;
+
+            const containerId = mode === 'config' ? 'diagram-tabs' : 'operator-diagram-tabs';
+            const containerEl = document.getElementById(containerId);
+            if (!containerEl) return;
+            
+            containerEl.innerHTML = '';
+            const diagrams = diagramsMap[currentVehicle.id];
+
+            if (Object.keys(diagrams).length === 0) {
+                 containerEl.innerHTML = `<p class="text-sm text-gray-500">No diagrams configured yet. Add a new diagram below.</p>`;
+                 return;
+            }
+
+            Object.entries(diagrams).forEach(([id, diagram]) => {
+                const isActive = currentDiagram && currentDiagram.id === id;
+                const button = document.createElement('button');
+                button.textContent = diagram.name;
+                button.onclick = () => selectDiagram(id);
+                button.className = `px-3 py-1 text-sm font-medium rounded-lg transition action-button ${
+                    isActive 
+                        ? 'bg-primary text-white shadow-md' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`;
+                containerEl.appendChild(button);
+            });
+            
+            // Update current diagram name display
+            if (mode === 'config') {
+                const nameEl = document.getElementById('current-diagram-name');
+                if (nameEl) nameEl.textContent = currentDiagram ? currentDiagram.name : 'No Diagram Selected';
+            }
+        }
+
+        function renderHotspotView(mode) {
+            const isConfig = mode === 'config';
+            const containerEl = isConfig ? hotspotContainerEl : operatorHotspotContainerEl;
+            const imageEl = isConfig ? document.getElementById('base-image') : document.getElementById('operator-base-image');
+            const hotspotListBodyEl = isConfig ? document.getElementById('hotspot-list-body') : null;
+
+            if (!containerEl || !imageEl) return; // Defensive check
+            
+            // Clear previous hotspots
+            containerEl.querySelectorAll('.hotspot-marker').forEach(el => el.remove());
+            containerEl.style.minHeight = '200px';
+
+            if (!currentDiagram) {
+                imageEl.src = isConfig 
+                    ? 'https://placehold.co/800x400/eeeeee/333333?text=Add+A+Diagram+Below'
+                    : 'https://placehold.co/800x400/eeeeee/333333?text=Diagram+Not+Loaded';
+                imageEl.onload = () => { containerEl.style.minHeight = 'auto'; }
+                if (hotspotListBodyEl) hotspotListBodyEl.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-gray-400">Select or add a diagram first.</td></tr>';
+                return;
+            }
+
+            // Load the image
+            imageEl.src = currentDiagram.image;
+            imageEl.onerror = () => {
+                 imageEl.src = 'https://placehold.co/800x400/ef4444/ffffff?text=Image+Load+Failed';
+                 displayStatus('Error: Could not load diagram image from URL. Try re-uploading.', 'bg-red-100 text-red-700', false);
+            };
+            imageEl.onload = () => { containerEl.style.minHeight = 'auto'; }; // Adjust container size
+
+            const hotspots = currentDiagram.hotspots || []; // Ensure it's an array
+            
+            // Render hotspots markers
+            hotspots.forEach((hotspot, index) => {
+                const marker = document.createElement('div');
+                marker.className = `hotspot-marker ${isConfig ? 'hotspot-config' : 'hotspot-operator'}`;
+                marker.title = hotspot.name;
+                // Add number label inside the marker
+                marker.textContent = index + 1;
+                
+                marker.style.left = `${hotspot.x_pct}%`;
+                marker.style.top = `${hotspot.y_pct}%`;
+                marker.dataset.id = hotspot.id;
+                marker.dataset.index = index;
+                
+                if (!isConfig) {
+                    // Operator Mode: Add click handler for selection
+                    marker.onclick = (e) => selectOperatorHotspot(hotspot, marker, e);
+                    // Prevent image click event from firing when clicking marker
+                    marker.addEventListener('click', (e) => e.stopPropagation()); 
+                } else {
+                    // Config Mode: Allow editing/deleting from list
+                    marker.dataset.name = hotspot.name;
+                }
+
+                containerEl.appendChild(marker);
+            });
+            
+            // Render hotspot list in config mode
+            if (isConfig) {
+                renderConfigHotspotList(hotspots);
+            }
+        }
+
+        function renderConfigHotspotList(hotspots) {
+            const hotspotListBodyEl = document.getElementById('hotspot-list-body');
+            if (!hotspotListBodyEl) return;
+            
+            hotspotListBodyEl.innerHTML = '';
+
+            if (hotspots.length === 0) {
+                hotspotListBodyEl.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-gray-400">Click on the image to add hotspots.</td></tr>';
+                return;
+            }
+
+            // Function to generate the dropdown HTML for a given hotspot
+            const generateProblemTypeSelect = (hotspot, index) => {
+                let optionsHtml = PROBLEM_TYPES.map(type => 
+                    `<option value="${type.value}" ${hotspot.problemTypeValue === type.value ? 'selected' : ''}>${type.name}</option>`
+                ).join('');
+
+                return `
+                    <select data-index="${index}" onchange="window.updateHotspotProblemType(event)" 
+                            class="w-full p-1 border border-gray-300 rounded-md focus:border-primary focus:ring-primary text-sm bg-white">
+                        ${optionsHtml}
+                    </select>
+                `;
+            };
+
+
+            hotspots.forEach((hotspot, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-100 transition';
+                // Ensure default values are set if properties are missing (e.g., old data)
+                const problemTypeValue = hotspot.problemTypeValue || "0";
+                
+                tr.innerHTML = `
+                    <td class="px-2 py-2 text-sm text-gray-900">${index + 1}</td>
+                    <td class="px-2 py-2 text-sm text-gray-900">
+                        <input type="text" value="${hotspot.name}" data-index="${index}" onchange="window.updateHotspotName(event)" 
+                               class="w-full p-1 border border-gray-300 rounded-md focus:border-primary focus:ring-primary text-sm"/>
+                    </td>
+                    <td class="px-2 py-2 text-sm text-gray-900">
+                        ${generateProblemTypeSelect(hotspot, index)}
+                    </td>
+                    <td class="px-2 py-2 text-right">
+                        <button onclick="window.deleteHotspot(${index})" class="text-danger hover:text-red-700 text-sm font-medium transition">Delete</button>
+                    </td>
+                `;
+                hotspotListBodyEl.appendChild(tr);
+            });
+        }
+        
+        // Expose functions globally for onclick attributes
+        window.updateHotspotName = function(event) { updateHotspotName(event); }
+        window.deleteHotspot = function(index) { deleteHotspot(index); }
+        window.updateHotspotProblemType = function(event) { updateHotspotProblemType(event); }
+
+
+        function renderVehicleList() {
+            const body = document.getElementById('vehicle-list-body');
+            if (!body) return;
+            
+            body.innerHTML = '';
+
+            if (vehicleTypes.length === 0) {
+                body.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">No vehicle types defined yet.</td></tr>';
+                return;
+            }
+
+            vehicleTypes.forEach(vehicle => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                tr.innerHTML = `
+                    <td class="px-4 py-4 text-sm font-medium text-gray-900">${vehicle.name}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="window.navigate('config', '${vehicle.id}')" class="text-primary hover:text-primary-light transition mr-3">Master Configure</button>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="window.navigate('operator', '${vehicle.id}')" class="text-warning hover:text-yellow-600 transition">Log Problem</button>
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+        
+        function renderProblemLog() {
+             const logContainer = document.getElementById('problem-log-container');
+             if (!logContainer) return;
+             
+             logContainer.innerHTML = '';
+             
+             if (problemsLog.length === 0) {
+                 logContainer.innerHTML = '<p class="text-sm text-gray-500">No problems logged yet.</p>';
+                 return;
+             }
+             
+             // Sort by timestamp descending
+             problemsLog.sort((a, b) => {
+                 const timeA = a.timestamp && a.timestamp.seconds ? a.timestamp.seconds : 0;
+                 const timeB = b.timestamp && b.timestamp.seconds ? b.timestamp.seconds : 0;
+                 return timeB - timeA;
+             });
+
+             problemsLog.forEach(log => {
+                 const time = log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleTimeString() : 'N/A';
+                 const date = log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
+                 const reporterIdShort = log.reporterId ? log.reporterId.substring(0, 8) + '...' : 'Unknown';
+                 
+                 // Show problem type if available, fallback to a dash
+                 const problemTypeDisplay = log.problemTypeName || '-';
+
+                 const div = document.createElement('div');
+                 div.className = 'p-3 border border-gray-200 rounded-lg bg-white shadow-sm';
+                 div.innerHTML = `
+                    <p class="text-xs font-semibold text-danger">${log.problemArea} <span class="text-xs text-gray-500 ml-2">(${problemTypeDisplay})</span></p>
+                    <p class="text-sm text-gray-800">${log.description}</p>
+                    <p class="text-xs text-gray-500 mt-1">Vehicle: ${log.vehicleName} (${log.diagramName}) | Reported by: ${reporterIdShort} at ${date} ${time}</p>
+                 `;
+                 logContainer.appendChild(div);
+             });
+        }
+
+
+        // --- CONFIGURATION LOGIC ---
+
+        window.handleImageUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // CRITICAL CHECK: Ensure a diagram is currently selected
+            if (!currentDiagram) {
+                return displayStatus('Please select or create a diagram first before uploading an image.', 'bg-warning text-yellow-700', true);
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Update the image src in the model
+                currentDiagram.image = e.target.result; // Data URL
+                // Update the image element on the page
+                const imageEl = document.getElementById('base-image');
+                if (imageEl) imageEl.src = e.target.result;
+
+                displayStatus('Image uploaded. Click "Save Configuration" to persist.', 'bg-blue-100 text-blue-700', true);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        window.placeHotspot = function(event) {
+            if (state.view !== 'config' || !currentDiagram || !hotspotContainerEl) return;
+
+            const rect = hotspotContainerEl.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            // Calculate percentage coordinates
+            const x_pct = (x / rect.width) * 100;
+            const y_pct = (y / rect.height) * 100;
+
+            const newHotspot = {
+                id: crypto.randomUUID(),
+                name: `Hotspot ${currentDiagram.hotspots.length + 1}`,
+                x_pct: x_pct,
+                y_pct: y_pct,
+                // Initialize new problem type fields
+                problemTypeValue: PROBLEM_TYPES[0].value, 
+                problemTypeName: PROBLEM_TYPES[0].name,
+            };
+
+            currentDiagram.hotspots.push(newHotspot);
+            renderHotspotView('config');
+        }
+
+        function updateHotspotName(event) {
+            if (!currentDiagram) return;
+            const index = parseInt(event.target.dataset.index);
+            if (index >= 0 && index < currentDiagram.hotspots.length) {
+                currentDiagram.hotspots[index].name = event.target.value;
+                // Re-render markers to update titles/labels
+                renderHotspotView('config');
+            }
+        }
+        
+        function updateHotspotProblemType(event) {
+             if (!currentDiagram) return;
+             const index = parseInt(event.target.dataset.index);
+             const selectedValue = event.target.value;
+             const selectedName = event.target.options[event.target.selectedIndex].text;
+
+             if (index >= 0 && index < currentDiagram.hotspots.length) {
+                currentDiagram.hotspots[index].problemTypeValue = selectedValue;
+                currentDiagram.hotspots[index].problemTypeName = selectedName;
+             }
+        }
+
+        function deleteHotspot(index) {
+            if (!currentDiagram) return;
+            if (index >= 0 && index < currentDiagram.hotspots.length) {
+                currentDiagram.hotspots.splice(index, 1);
+                renderHotspotView('config');
+            }
+        }
+
+        // --- CRUD OPERATIONS (VEHICLE TYPES) ---
+
+        window.addVehicleType = async function() {
+            // CRITICAL CHECK: Ensure Firebase is initialized and user is authenticated
+            if (!db || userId === 'loading' || configError) { // <-- ROBUST CHECK
+                if (configError) {
+                    return displayStatus('ERROR: Firebase configuration is incomplete. Please check the code for placeholder values.', 'bg-red-100 text-red-700', false);
+                }
+                if (userId === 'loading') {
+                    return displayStatus('Database initialization is still pending. Please wait until "Current User ID" is set.', 'bg-yellow-100 text-yellow-700', true);
+                }
+                return displayStatus('Database not initialized or failed to authenticate.', 'bg-red-100 text-red-700', true);
+            }
+            
+            const nameInput = document.getElementById('new-vehicle-name');
+            const name = nameInput.value.trim();
+
+            if (!name) {
+                return displayStatus('Please enter a vehicle type name.', 'bg-warning text-yellow-700', true);
+            }
+
+            try {
+                // Public Collection for Vehicle Types
+                const vehicleRef = doc(collection(db, `/artifacts/${appId}/public/data/vehicle_types`));
+                
+                await setDoc(vehicleRef, {
+                    name: name,
+                    createdAt: serverTimestamp(),
+                    createdBy: userId
+                });
+
+                nameInput.value = '';
+                displayStatus(`Vehicle type '${name}' added successfully.`, 'bg-success text-green-700', true);
+            } catch (error) {
+                console.error("Error adding vehicle type:", error);
+                displayStatus(`Error saving vehicle type: ${error.message}`, 'bg-danger text-red-700', false);
+            }
+        }
+        
+        window.addNewDiagram = async function() {
+            if (!db || !currentVehicle) return displayStatus('Select a vehicle first.', 'bg-red-100 text-red-700', true);
+            const nameInput = document.getElementById('new-diagram-name');
+            const name = nameInput.value.trim();
+
+            if (!name) {
+                return displayStatus('Please enter a diagram name.', 'bg-warning text-yellow-700', true);
+            }
+
+            try {
+                // Private Collection for Diagrams
+                // Path: /artifacts/{appId}/users/{userId}/vehicle_diagrams/{vehicleId}/diagrams/{diagramId}
+                const diagramRef = doc(collection(db, `/artifacts/${appId}/users/${userId}/vehicle_diagrams/${currentVehicle.id}/diagrams`));
+                const newDiagramId = diagramRef.id;
+
+                await setDoc(diagramRef, {
+                    id: newDiagramId,
+                    name: name,
+                    image: `https://placehold.co/800x400/eeeeee/333333?text=Upload+Image+for+${name}`,
+                    hotspotsJson: '[]', // Store JSON string of hotspots
+                    createdAt: serverTimestamp(),
+                });
+
+                nameInput.value = '';
+                displayStatus(`Diagram '${name}' created. Upload an image and configure hotspots.`, 'bg-success text-green-700', true);
+                
+                // Switch to the newly created diagram
+                // The onSnapshot listener will update diagramsMap, then we select it
+                // Adding a slight delay to ensure onSnapshot has picked up the new document
+                setTimeout(() => {
+                    if (diagramsMap[currentVehicle.id] && diagramsMap[currentVehicle.id][newDiagramId]) {
+                        selectDiagram(newDiagramId);
+                    }
+                }, 500); 
+
+            } catch (error) {
+                console.error("Error creating new diagram:", error);
+                displayStatus(`Error creating new diagram: ${error.message}`, 'bg-danger text-red-700', false);
+            }
+        }
+
+
+        window.saveConfiguration = async function() {
+            if (!db || !currentVehicle || !currentDiagram) {
+                return displayStatus('Cannot save: Select a vehicle and a diagram first.', 'bg-red-100 text-red-700', true);
+            }
+            
+            try {
+                // Private Document reference for the specific diagram
+                const diagramDocRef = doc(db, `/artifacts/${appId}/users/${userId}/vehicle_diagrams/${currentVehicle.id}/diagrams/${currentDiagram.id}`);
+                
+                // Prepare data for saving (serialize hotspots array to JSON string)
+                const dataToSave = {
+                    name: currentDiagram.name,
+                    image: currentDiagram.image,
+                    // IMPORTANT: Serialize the array for Firestore
+                    hotspotsJson: JSON.stringify(currentDiagram.hotspots), 
+                    updatedAt: serverTimestamp(),
+                };
+
+                await setDoc(diagramDocRef, dataToSave, { merge: true });
+
+                displayStatus('Configuration saved successfully!', 'bg-success text-green-700', true);
+            } catch (error) {
+                console.error("Error saving configuration:", error);
+                displayStatus(`Error saving configuration: ${error.message}`, 'bg-danger text-red-700', false);
+            }
+        }
+        
+        // --- OPERATOR LOGIC ---
+
+        function selectOperatorHotspot(hotspot, marker, event) {
+            if (!operatorHotspotContainerEl) return;
+            
+            // Remove selection from all markers
+            operatorHotspotContainerEl.querySelectorAll('.hotspot-marker').forEach(m => {
+                m.classList.remove('ring-4', 'ring-offset-2', 'ring-yellow-400');
+            });
+
+            // Add selection ring to the clicked marker
+            marker.classList.add('ring-4', 'ring-offset-2', 'ring-yellow-400');
+
+            // Update state and UI
+            state.selectedHotspot = hotspot;
+            
+            const selectedHotspotNameEl = document.getElementById('selected-hotspot-name');
+            const selectedHotspotTypeEl = document.getElementById('selected-hotspot-type');
+            const selectedHotspotDivEl = document.getElementById('operator-selected-hotspot');
+            const logProblemButtonEl = document.getElementById('log-problem-button');
+            const problemDescriptionEl = document.getElementById('problem-description');
+            
+            if (selectedHotspotNameEl) selectedHotspotNameEl.textContent = hotspot.name;
+            if (selectedHotspotTypeEl) {
+                const typeName = hotspot.problemTypeName && hotspot.problemTypeValue !== "0" ? `Type: ${hotspot.problemTypeName}` : 'Type: Not Specified';
+                selectedHotspotTypeEl.textContent = typeName;
+            }
+            if (selectedHotspotDivEl) selectedHotspotDivEl.classList.remove('hidden');
+            if (logProblemButtonEl) logProblemButtonEl.disabled = false;
+            if (problemDescriptionEl) problemDescriptionEl.focus();
+        }
+
+        window.logProblem = async function() {
+            if (!db || !currentVehicle || !currentDiagram || !state.selectedHotspot) {
+                return displayStatus('Cannot log problem: Select a hotspot first.', 'bg-red-100 text-red-700', true);
+            }
+
+            const descriptionInput = document.getElementById('problem-description');
+            const description = descriptionInput ? descriptionInput.value.trim() : '';
+
+            if (!description) {
+                return displayStatus('Please provide a problem description.', 'bg-warning text-yellow-700', true);
+            }
+            
+            // Validation for Problem Type (optional but good practice)
+            if (state.selectedHotspot.problemTypeValue === "0") {
+                 displayStatus('Warning: Problem type is not selected for this hotspot. Logging anyway.', 'bg-yellow-100 text-yellow-700', true);
+            }
+            
+            try {
+                // Public Collection for Problem Log
+                const logRef = doc(collection(db, `/artifacts/${appId}/public/data/problem_log`));
+
+                await setDoc(logRef, {
+                    id: logRef.id,
+                    vehicleId: currentVehicle.id,
+                    vehicleName: currentVehicle.name,
+                    diagramId: currentDiagram.id,
+                    diagramName: currentDiagram.name,
+                    hotspotId: state.selectedHotspot.id,
+                    problemArea: state.selectedHotspot.name,
+                    problemTypeValue: state.selectedHotspot.problemTypeValue,
+                    problemTypeName: state.selectedHotspot.problemTypeName,
+                    description: description,
+                    reporterId: userId,
+                    timestamp: serverTimestamp(),
+                });
+
+                // Clear form after successful log
+                if (descriptionInput) descriptionInput.value = '';
+                
+                const logProblemButtonEl = document.getElementById('log-problem-button');
+                const selectedHotspotDivEl = document.getElementById('operator-selected-hotspot');
+                
+                if (logProblemButtonEl) logProblemButtonEl.disabled = true;
+                
+                state.selectedHotspot = null;
+                if (selectedHotspotDivEl) selectedHotspotDivEl.classList.add('hidden');
+                
+                // Clear marker selection visuals
+                if (operatorHotspotContainerEl) {
+                    operatorHotspotContainerEl.querySelectorAll('.hotspot-marker').forEach(m => {
+                        m.classList.remove('ring-4', 'ring-offset-2', 'ring-yellow-400');
+                    });
+                }
+
+                displayStatus('Problem logged successfully!', 'bg-success text-green-700', true);
+            } catch (error) {
+                console.error("Error logging problem:", error);
+                displayStatus(`Error logging problem: ${error.message}`, 'bg-danger text-red-700', false);
+            }
+        }
+
+
+        // --- START APPLICATION ---
+        // Expose navigate globally so HTML attributes can call it
+        window.navigate = navigate;
+        // Start initialization when the window is fully loaded
+        window.onload = initializeFirebase;
+
+    </script>
+</body>
+</html>
