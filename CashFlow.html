@@ -14,11 +14,11 @@
         .metric-card { transition: transform 0.2s ease; }
         .metric-card:hover { transform: translateY(-2px); }
         
-        /* Custom Tooltip Styling */
+        /* Tooltip Logic - Adjusted to show BELOW the icon to avoid clipping */
         .tooltip-container { position: relative; display: inline-block; cursor: help; }
         .tooltip-text {
             visibility: hidden;
-            width: 240px;
+            width: 220px;
             background-color: #1e293b;
             color: #fff;
             text-align: left;
@@ -26,38 +26,33 @@
             padding: 10px;
             position: absolute;
             z-index: 100;
-            bottom: 125%; 
+            top: calc(100% + 8px); /* Positioned below the icon */
             right: 0;
             opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 0.75rem;
-            line-height: 1.25rem;
+            transition: opacity 0.2s;
+            font-size: 0.7rem;
+            line-height: 1.1rem;
             font-weight: 400;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
             pointer-events: none;
         }
-        
+        /* Arrow points UP now */
         .tooltip-text::after {
             content: "";
             position: absolute;
-            top: 100%;
+            bottom: 100%;
             right: 12px;
             border-width: 5px;
             border-style: solid;
-            border-color: #1e293b transparent transparent transparent;
-        }
-
-        .tooltip-bottom .tooltip-text {
-            bottom: auto;
-            top: 150%;
-        }
-        .tooltip-bottom .tooltip-text::after {
-            top: auto;
-            bottom: 100%;
             border-color: transparent transparent #1e293b transparent;
         }
-
         .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
+
+        /* Status Background Classes */
+        .bg-status-critical { background-color: #991b1b !important; border-left: 6px solid #f87171 !important; }
+        .bg-status-caution { background-color: #92400e !important; border-left: 6px solid #fbbf24 !important; }
+        .bg-status-stable { background-color: #1e293b !important; border-left: 6px solid #38bdf8 !important; }
+        .bg-status-growth { background-color: #064e3b !important; border-left: 6px solid #34d399 !important; }
 
         .currency-prefix {
             font-size: 0.45em;
@@ -101,9 +96,9 @@
                 <section class="space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-xs font-bold text-slate-400 uppercase">Opening Balances</h3>
-                        <div class="tooltip-container tooltip-bottom">
-                            <svg class="w-4 h-4 text-slate-300 hover:text-orange-500 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-                            <div class="tooltip-text"><b>Starting Cash:</b> Enter your total liquid AED across all operating accounts. Exclude restricted funds or retention hold-backs.</div>
+                        <div class="tooltip-container">
+                            <svg class="w-4 h-4 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                            <div class="tooltip-text"><b>Starting Cash:</b> Enter the total AED available in your bank accounts right now.</div>
                         </div>
                     </div>
                     <div>
@@ -117,8 +112,8 @@
                     <div class="flex items-center justify-between">
                         <h3 class="text-xs font-bold text-slate-400 uppercase">Operational Inflow</h3>
                         <div class="tooltip-container">
-                            <svg class="w-4 h-4 text-slate-300 hover:text-orange-500 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-                            <div class="tooltip-text"><b>Weekly Sales:</b> Average expected cash collection per week. Account for typical 60-90 day payment cycles.</div>
+                            <svg class="w-4 h-4 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                            <div class="tooltip-text"><b>Weekly Sales:</b> The average cash you collect from invoices per week.</div>
                         </div>
                     </div>
                     <div>
@@ -132,8 +127,8 @@
                     <div class="flex items-center justify-between">
                         <h3 class="text-xs font-bold text-slate-400 uppercase">Cost of Goods</h3>
                         <div class="tooltip-container">
-                            <svg class="w-4 h-4 text-slate-300 hover:text-orange-500 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-                            <div class="tooltip-text"><b>Material Margin:</b> % of revenue spent on raw materials (cement, aggregates, additives).</div>
+                            <svg class="w-4 h-4 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                            <div class="tooltip-text"><b>Material Margin:</b> The percentage of sales revenue spent on cement and aggregates.</div>
                         </div>
                     </div>
                     <div class="flex justify-between items-center mb-1">
@@ -148,8 +143,8 @@
                     <div class="flex items-center justify-between">
                         <h3 class="text-xs font-bold text-slate-400 uppercase">Fixed Outflows</h3>
                         <div class="tooltip-container">
-                            <svg class="w-4 h-4 text-slate-300 hover:text-orange-500 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-                            <div class="tooltip-text"><b>Fixed Burn:</b> Include driver salaries, utilities, and fleet lease payments.</div>
+                            <svg class="w-4 h-4 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                            <div class="tooltip-text"><b>Fixed Costs:</b> Monthly rent, utilities, and weekly payroll for batching and transport teams.</div>
                         </div>
                     </div>
                     <div>
@@ -166,84 +161,86 @@
 
         <!-- Main Dashboard Area -->
         <main class="flex-1 p-6 flex flex-col gap-6 bg-[#f8fafc] overflow-hidden">
-            <!-- Top Stats - Fixed Height -->
+            <!-- Top Stats -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
-                <div class="metric-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Forecasted W13 Balance</span>
-                        <div class="tooltip-container tooltip-bottom">
+                <div class="metric-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">W13 Balance</span>
+                        <div class="tooltip-container">
                             <svg class="w-3 h-3 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-                            <div class="tooltip-text"><b>13-Week Forecast:</b> Short-term liquidity projection based on current simulation.</div>
+                            <div class="tooltip-text"><b>13-Week Forecast:</b> Projected cash position 3 months from now based on current trends.</div>
                         </div>
                     </div>
-                    <div class="flex items-baseline mt-2">
+                    <div class="flex items-baseline">
                         <span class="currency-prefix">AED</span>
                         <div id="stat-w13-cash" class="text-2xl font-black text-slate-900">0</div>
                     </div>
                     <div id="stat-trend" class="text-[10px] mt-1 font-semibold"></div>
                 </div>
 
-                <div class="metric-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Operational Runway</span>
-                        <div class="tooltip-container tooltip-bottom">
+                <div class="metric-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Runway</span>
+                        <div class="tooltip-container">
                             <svg class="w-3 h-3 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-                            <div class="tooltip-text"><b>Runway:</b> Months of operation you can sustain if collections stopped today.</div>
+                            <div class="tooltip-text"><b>Months of Runway:</b> How long you can keep the plants running if revenue stopped today.</div>
                         </div>
                     </div>
-                    <div id="stat-runway" class="text-2xl font-black text-slate-900 mt-2">0.0 Mo</div>
-                    <div class="text-[10px] mt-1 font-semibold text-slate-500">Target: 3 Months (W13)</div>
+                    <div id="stat-runway" class="text-2xl font-black text-slate-900">0.0 Mo</div>
+                    <div class="text-[10px] mt-1 font-semibold text-slate-500">Target: 3 Months</div>
                 </div>
 
-                <div class="metric-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Safety Net Target</span>
-                        <div class="tooltip-container tooltip-bottom">
+                <div class="metric-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Safety Net</span>
+                        <div class="tooltip-container">
                             <svg class="w-3 h-3 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-                            <div class="tooltip-text"><b>Safety Net:</b> Ideal cash cushion representing 6 months of total outflows.</div>
+                            <div class="tooltip-text"><b>Liquidity Goal:</b> 6 months of total expenses. This provides complete operational security.</div>
                         </div>
                     </div>
-                    <div class="flex items-baseline mt-2">
+                    <div class="flex items-baseline">
                         <span class="currency-prefix">AED</span>
                         <div id="stat-safety-goal" class="text-2xl font-black text-slate-900">0</div>
                     </div>
-                    <div class="text-[10px] mt-1 font-semibold text-slate-500">Required Liquidity</div>
+                    <div class="text-[10px] mt-1 font-semibold text-slate-500">Total Requirement</div>
                 </div>
             </div>
 
-            <!-- Chart Section - Flex to Fill -->
+            <!-- Chart Section -->
             <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col flex-1 min-h-0">
-                <div class="flex items-center justify-between mb-4 shrink-0">
-                    <div>
-                        <h3 class="text-lg font-bold text-slate-900">Liquidity Forecast</h3>
-                        <p class="text-xs text-slate-500">Rolling net cash position projection (AED)</p>
-                    </div>
-                </div>
+                <h3 class="text-lg font-bold text-slate-900 mb-4 shrink-0">Liquidity Forecast</h3>
                 <div class="flex-1 min-h-0 relative"> 
                     <canvas id="forecastChart"></canvas>
                 </div>
             </div>
 
-            <!-- Industrial Context Footer - Fixed Height -->
+            <!-- Industrial Context Footer -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
-                <div class="bg-slate-900 text-white p-5 rounded-xl shadow-lg border-l-4 border-orange-500">
+                <div id="dss-panel" class="p-6 rounded-xl shadow-lg transition-all duration-700 ease-in-out">
                     <div class="flex justify-between items-start mb-2">
-                        <h4 class="text-orange-500 font-bold uppercase text-[10px] tracking-widest">Decision Support System</h4>
-                        <span class="text-[9px] text-slate-500 italic uppercase">Analysis</span>
+                        <h4 class="font-bold uppercase text-[10px] tracking-widest text-white opacity-80">Decision Support System</h4>
+                        <span id="status-badge" class="px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter bg-white text-slate-900 shadow-sm">Scanning...</span>
                     </div>
-                    <p id="dynamic-summary" class="text-xs leading-relaxed text-slate-300">Calculating business health...</p>
+                    <div id="dss-mode-title" class="text-xl font-black text-white mb-2 uppercase tracking-tight">System Initialization</div>
+                    <p id="dynamic-summary" class="text-sm leading-relaxed text-white font-medium opacity-90 italic">Analyzing current financial parameters...</p>
                 </div>
-                <div class="bg-white p-5 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm">
-                    <div>
-                        <h4 class="text-slate-400 font-bold uppercase text-[9px] tracking-widest mb-1">Total Monthly Burn</h4>
-                        <div class="flex items-baseline">
-                            <span class="currency-prefix">AED</span>
-                            <div id="monthly-burn-val" class="text-xl font-black text-slate-900">0</div>
+
+                <div class="bg-white p-5 rounded-xl border border-slate-200 flex flex-col justify-center shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h4 class="text-slate-400 font-bold uppercase text-[9px] tracking-widest mb-1">Monthly Burn</h4>
+                            <div class="flex items-baseline">
+                                <span class="currency-prefix">AED</span>
+                                <div id="monthly-burn-val" class="text-xl font-black text-slate-900">0</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <h4 class="text-slate-400 font-bold uppercase text-[9px] tracking-widest mb-1">Expense Ratio</h4>
+                            <div id="ratio-val" class="text-xl font-black text-orange-600">--</div>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <h4 class="text-slate-400 font-bold uppercase text-[9px] tracking-widest mb-1">Fixed : Variable Ratio</h4>
-                        <div id="ratio-val" class="text-xl font-black text-orange-600">--</div>
+                    <div class="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+                        <div id="ratio-bar" class="bg-orange-500 h-full transition-all duration-500" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
@@ -259,10 +256,7 @@
         }
 
         function formatValue(val) {
-            return new Intl.NumberFormat('en-AE', { 
-                maximumFractionDigits: 0,
-                minimumFractionDigits: 0
-            }).format(val);
+            return new Intl.NumberFormat('en-AE', { maximumFractionDigits: 0 }).format(val);
         }
 
         function runSimulation() {
@@ -289,44 +283,67 @@
                 labels.push(i === 0 ? 'Today' : 'W' + i);
             }
 
-            const finalCash = parseFloat(projection[13]);
-            document.getElementById('stat-w13-cash').innerText = formatValue(finalCash);
-            
+            document.getElementById('stat-w13-cash').innerText = formatValue(projection[13]);
             const monthlyBurn = totalWeeklyOutflow * 4.345;
             document.getElementById('monthly-burn-val').innerText = formatValue(monthlyBurn);
 
             const fixedPart = payroll + weeklyFixed;
-            const ratio = ((fixedPart / totalWeeklyOutflow) * 100).toFixed(0);
-            document.getElementById('ratio-val').innerText = `${ratio}% Fixed`;
+            const fixedRatio = ((fixedPart / totalWeeklyOutflow) * 100).toFixed(0);
+            document.getElementById('ratio-val').innerText = `${fixedRatio}% Fixed`;
+            document.getElementById('ratio-bar').style.width = `${fixedRatio}%`;
 
-            const trend = finalCash > startCash ? 'Increasing' : 'Decreasing';
-            const trendColor = finalCash > startCash ? 'text-emerald-500' : 'text-rose-500';
-            document.getElementById('stat-trend').innerText = `Trajectory: ${trend}`;
-            document.getElementById('stat-trend').className = `text-[10px] mt-1 font-semibold ${trendColor}`;
+            const finalCash = parseFloat(projection[13]);
+            document.getElementById('stat-trend').innerText = `Trajectory: ${finalCash > startCash ? 'Increasing' : 'Decreasing'}`;
+            document.getElementById('stat-trend').className = `text-[10px] mt-1 font-semibold ${finalCash > startCash ? 'text-emerald-500' : 'text-rose-500'}`;
 
-            const runway = current / monthlyBurn;
+            const runway = monthlyBurn > 0 ? (startCash / monthlyBurn) : 99;
             const safetyGoal = monthlyBurn * 6;
 
             document.getElementById('stat-runway').innerText = runway.toFixed(1) + ' Mo';
-            document.getElementById('stat-runway').className = `text-2xl font-black ${runway < 3 ? 'text-rose-600' : 'text-slate-900'}`;
+            document.getElementById('stat-runway').className = `text-2xl font-black ${runway < 2 ? 'text-rose-600' : 'text-slate-900'}`;
             document.getElementById('stat-safety-goal').innerText = formatValue(safetyGoal);
 
-            const summaryEl = document.getElementById('dynamic-summary');
-            if (runway < 3) {
-                summaryEl.innerText = `ALERT: Runway below 3 months. focus on collection of overdue receivables immediately.`;
-            } else if (runway >= 6) {
-                summaryEl.innerText = `OPPORTUNITY: Over 6 months liquidity. Ideal for fleet maintenance or negotiating bulk rates.`;
-            } else {
-                summaryEl.innerText = `STABLE: Liquidity meets your 13-week operational target.`;
-            }
-
+            updateDSSPanel(runway, weeklyNet, matPerc);
             updateChart(labels, projection);
+        }
+
+        function updateDSSPanel(runway, weeklyNet, matPerc) {
+            const panel = document.getElementById('dss-panel');
+            const summary = document.getElementById('dynamic-summary');
+            const modeTitle = document.getElementById('dss-mode-title');
+            const statusBadge = document.getElementById('status-badge');
+
+            panel.className = "p-6 rounded-xl shadow-lg transition-all duration-700 ease-in-out ";
+
+            if (runway < 1.5) {
+                panel.classList.add('bg-status-critical');
+                modeTitle.innerText = "🚨 Critical Mode";
+                statusBadge.innerText = "Status: Danger";
+                summary.innerText = "CRITICAL ALERT: Runway is dangerously low (" + runway.toFixed(1) + " months). Immediate cash infusion or collection of major AED receivables required to prevent operational stall.";
+            } 
+            else if (runway < 3.5) {
+                panel.classList.add('bg-status-caution');
+                modeTitle.innerText = "⚠️ Caution Mode";
+                statusBadge.innerText = "Status: Warning";
+                summary.innerText = "CAUTION: Liquidity is tightening at " + runway.toFixed(1) + " months. Prioritize cash collections from key project sites and tighten controls on cement deliveries.";
+            } 
+            else if (runway >= 6 && weeklyNet > 0) {
+                panel.classList.add('bg-status-growth');
+                modeTitle.innerText = "✅ Growth Mode";
+                statusBadge.innerText = "Status: Safe";
+                summary.innerText = "Growth environment detected (" + runway.toFixed(1) + " months). Excellent position to negotiate bulk material discounts or invest in fleet maintenance to lower long-term costs.";
+            }
+            else {
+                panel.classList.add('bg-status-stable');
+                modeTitle.innerText = "📊 Healthy Mode";
+                statusBadge.innerText = "Status: Optimal";
+                summary.innerText = "Stable operations with " + runway.toFixed(1) + " months runway. Focus on maintaining a tight material margin (currently " + matPerc + "%) to secure the long-term safety net.";
+            }
         }
 
         function updateChart(labels, data) {
             const ctx = document.getElementById('forecastChart').getContext('2d');
             if (chart) chart.destroy();
-
             const gradient = ctx.createLinearGradient(0, 0, 0, 400);
             gradient.addColorStop(0, 'rgba(249, 115, 22, 0.4)');
             gradient.addColorStop(1, 'rgba(249, 115, 22, 0)');
@@ -349,21 +366,9 @@
                 options: {
                     maintainAspectRatio: false,
                     responsive: true,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#1e293b',
-                            callbacks: { label: (ctx) => ` AED ${new Intl.NumberFormat('en-AE').format(ctx.raw)}` }
-                        }
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
-                        y: {
-                            grid: { color: '#f1f5f9' },
-                            ticks: {
-                                callback: (val) => (val / 1000) + 'k',
-                                font: { size: 9 }
-                            }
-                        },
+                        y: { grid: { color: '#f1f5f9' }, ticks: { callback: (val) => (val / 1000) + 'k', font: { size: 9 } } },
                         x: { grid: { display: false }, ticks: { font: { size: 9 } } }
                     }
                 }
@@ -374,11 +379,6 @@
             initDate();
             runSimulation();
         };
-
-        // Resize chart when window changes to maintain full height
-        window.addEventListener('resize', () => {
-            if (chart) chart.resize();
-        });
     </script>
 </body>
 </html>
